@@ -1,0 +1,118 @@
+erDiagram
+  USERS ||--o{ ACCOUNTS : owns
+  USERS ||--o{ ACCOUNT_MEMBERS : "is member"
+  ACCOUNTS ||--o{ ACCOUNT_MEMBERS : "shared via"
+  ACCOUNTS ||--o{ IMPORTS : receives
+  USERS |o--o{ IMPORTS : uploads
+  ACCOUNTS ||--o{ TRANSACTIONS : contains
+  IMPORTS |o--o{ TRANSACTIONS : loads
+  CATEGORIES |o--o{ TRANSACTIONS : classifies
+  CATEGORIES ||--o{ CATEGORY_EXAMPLES : "labelled by"
+  ACCOUNTS ||--o{ SUBSCRIPTIONS : has
+  CATEGORIES |o--o{ SUBSCRIPTIONS : classifies
+  SUBSCRIPTIONS ||--o{ SUBSCRIPTION_CHARGES : groups
+  TRANSACTIONS ||--o| SUBSCRIPTION_CHARGES : "is charge of"
+  SUBSCRIPTIONS ||--o{ PRICE_CHANGES : logs
+  SUBSCRIPTIONS ||--o{ SPLIT_SHARES : "split into"
+  USERS ||--o{ SPLIT_SHARES : "pays share"
+  USERS ||--o{ BUDGETS : sets
+  CATEGORIES ||--o{ BUDGETS : limits
+
+  USERS {
+    serial user_id PK
+    citext email UK "format CHECK"
+    text password_hash "bcrypt only (CHECK)"
+    varchar full_name
+    timestamptz created_at
+    timestamptz last_login_at
+  }
+  ACCOUNTS {
+    serial account_id PK
+    int owner_id FK
+    varchar name "UK with owner_id"
+    varchar bank_name
+    varchar account_type "savings | current | credit_card | wallet"
+    char currency
+    timestamptz created_at
+  }
+  ACCOUNT_MEMBERS {
+    int account_id PK,FK
+    int user_id PK,FK
+    varchar access_level "read_only | contributor"
+    timestamptz added_at
+  }
+  CATEGORIES {
+    smallserial category_id PK
+    varchar name UK
+    text description
+    boolean is_essential
+  }
+  CATEGORY_EXAMPLES {
+    serial example_id PK
+    smallint category_id FK
+    varchar example_text UK
+    vector embedding "384-d, HNSW"
+  }
+  IMPORTS {
+    serial import_id PK
+    int account_id FK
+    int user_id FK
+    varchar filename
+    char file_hash "UK with account_id"
+    varchar bank_profile
+    char mongo_doc_id "-> MongoDB"
+    int rows_total
+    int rows_inserted
+    int rows_skipped
+    timestamptz imported_at
+  }
+  TRANSACTIONS {
+    bigserial txn_id PK
+    int account_id FK
+    int import_id FK
+    date txn_date
+    text raw_description
+    text merchant_key "GENERATED"
+    positive_amount amount
+    smallint category_id FK
+    vector embedding "384-d, HNSW"
+    timestamptz created_at
+  }
+  SUBSCRIPTIONS {
+    serial sub_id PK
+    int account_id FK
+    text merchant_key "UK with account_id"
+    varchar display_name
+    smallint category_id FK
+    varchar cadence "weekly..yearly"
+    smallint interval_days
+    positive_amount current_amount
+    date first_charge
+    date last_charge
+    int charge_count
+    varchar status "active | dormant"
+    boolean price_alert
+  }
+  SUBSCRIPTION_CHARGES {
+    bigint txn_id PK,FK
+    int sub_id FK
+  }
+  PRICE_CHANGES {
+    serial change_id PK
+    int sub_id FK
+    positive_amount old_amount
+    positive_amount new_amount
+    numeric pct_change "GENERATED"
+    date effective_date "UK with sub_id"
+  }
+  SPLIT_SHARES {
+    int sub_id PK,FK
+    int user_id PK,FK
+    numeric share_percent "0 < x <= 100"
+  }
+  BUDGETS {
+    serial budget_id PK
+    int user_id FK
+    smallint category_id FK
+    positive_amount monthly_limit
+  }

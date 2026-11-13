@@ -1,0 +1,19 @@
+sequenceDiagram
+  autonumber
+  participant U as User (browser)
+  participant A as /api/import
+  participant M as MongoDB
+  participant E as MiniLM embedder
+  participant P as PostgreSQL + pgvector
+  U->>A: POST file text (CSV / JSON)
+  A->>P: same file already imported? (imports.file_hash)
+  A->>M: find bank profile (bank_profiles)
+  A->>M: insertOne raw_statements {records, status: processing}
+  A->>P: normalize_merchant() for every row
+  A->>E: embed each distinct merchant once
+  A->>P: BEGIN
+  A->>P: INSERT imports, INSERT transactions (trigger T4 auto-categorises)
+  A->>P: SELECT detect_subscriptions(account) (trigger T1 logs price rises)
+  A->>P: COMMIT (or ROLLBACK on any error)
+  A->>M: updateOne {status: imported, import_id, result}
+  A-->>U: inserted / skipped / subscriptions found

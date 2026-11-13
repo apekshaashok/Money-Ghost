@@ -1,0 +1,253 @@
+Pager usage is off.
+=== Q1  JOIN + GROUP BY + ORDER BY: spend per account and category, last 3 months
+      account      |     category      | txns |  total   
+-------------------+-------------------+------+----------
+ HDFC Savings      | Housing           |    3 | 75000.00
+ HDFC Savings      | Shopping          |    8 | 15811.00
+ HDFC Savings      | Food & Dining     |   34 | 14794.00
+ HDFC Savings      | Groceries         |    7 |  9690.00
+ HDFC Savings      | Transport         |    4 |  6054.00
+ HDFC Savings      | Utilities & Bills |    5 |  4133.00
+ HDFC Savings      | Entertainment     |    6 |  3684.00
+ ICICI Credit Card | Food & Dining     |    7 | 12572.00
+ ICICI Credit Card | Shopping          |    5 | 11192.00
+ ICICI Credit Card | Transport         |    2 |  9040.00
+ ICICI Credit Card | Software & Cloud  |    5 |  4655.00
+ ICICI Credit Card | Entertainment     |    6 |  1084.00
+(12 rows)
+
+=== Q2  GROUP BY + HAVING: merchants charged at least 10 times, average > 400
+        merchant_key         | times | avg_amount |   total   
+-----------------------------+-------+------------+-----------
+ house rent                  |    15 |   25000.00 | 375000.00
+ swiggy                      |   190 |     422.54 |  80283.00
+ bigbasket                   |    58 |    1370.98 |  79517.00
+ flipkart internet           |    29 |    2527.41 |  73295.00
+ amazon order                |    31 |    2124.55 |  65861.00
+ myntra designs              |    29 |    2080.62 |  60338.00
+ truffles restaurant         |    29 |    1773.00 |  51417.00
+ hp petrol pump              |    29 |    1693.83 |  49121.00
+ blinkit                     |    58 |     799.52 |  46372.00
+ coursera plus               |    10 |    3299.00 |  32990.00
+ openai chatgpt subscr       |    14 |    1999.00 |  27986.00
+ country delight milk        |    63 |     420.00 |  26460.00
+ zomato                      |    44 |     577.93 |  25429.00
+ golds gym                   |    15 |    1500.00 |  22500.00
+ billdesk bescom electricity |    14 |    1452.14 |  20330.00
+ cult fit gym                |    11 |    1200.00 |  13200.00
+ netflix                     |    15 |     549.00 |   8235.00
+(17 rows)
+
+=== Q3  Subquery: transactions larger than the account average for their category
+  txn_date  |  raw_description   | amount  |   category    
+------------+--------------------+---------+---------------
+ 2025-10-22 | AMAZON PRIME*KZCJ3 | 1499.00 | Entertainment
+ 2026-10-22 | AMAZON PRIME*AGCQ7 | 1499.00 | Entertainment
+(2 rows)
+
+=== Q4  Window functions (the core of leak detection): gaps between Netflix charges
+  txn_date  | amount | gap_days | price_change | running_total 
+------------+--------+----------+--------------+---------------
+ 2025-09-05 | 499.00 |          |              |        499.00
+ 2025-10-05 | 499.00 |       30 |         0.00 |        998.00
+ 2025-11-05 | 499.00 |       31 |         0.00 |       1497.00
+ 2025-12-05 | 499.00 |       30 |         0.00 |       1996.00
+ 2026-01-05 | 499.00 |       31 |         0.00 |       2495.00
+ 2026-02-05 | 499.00 |       31 |         0.00 |       2994.00
+ 2026-03-05 | 499.00 |       28 |         0.00 |       3493.00
+ 2026-04-05 | 499.00 |       31 |         0.00 |       3992.00
+ 2026-05-05 | 499.00 |       30 |         0.00 |       4491.00
+ 2026-06-05 | 499.00 |       31 |         0.00 |       4990.00
+ 2026-07-05 | 649.00 |       30 |       150.00 |       5639.00
+ 2026-08-05 | 649.00 |       31 |         0.00 |       6288.00
+ 2026-09-05 | 649.00 |       31 |         0.00 |       6937.00
+ 2026-10-05 | 649.00 |       30 |         0.00 |       7586.00
+ 2026-11-05 | 649.00 |       31 |         0.00 |       8235.00
+(15 rows)
+
+=== Q5  Stored function: run leak detection, then read the subscription_overview view
+NOTICE:  table "_clusters" does not exist, skipping
+ subscriptions_in_hdfc 
+-----------------------
+                     6
+(1 row)
+
+     display_name      |  cadence  | current_amount | previous_amount | last_pct_change | status  | monthly_equivalent 
+-----------------------+-----------+----------------+-----------------+-----------------+---------+--------------------
+ House Rent            | monthly   |       25000.00 |                 |                 | active  |           25000.00
+ Openai Chatgpt Subscr | monthly   |        1999.00 |                 |                 | active  |            1999.00
+ Netflix               | monthly   |         649.00 |          499.00 |           30.06 | active  |             649.00
+ Airtel Prepaid        | monthly   |         299.00 |                 |                 | active  |             299.00
+ Apple Icloud          | monthly   |         219.00 |           75.00 |          192.00 | active  |             219.00
+ Audible               | monthly   |         199.00 |                 |                 | active  |             199.00
+ Google Youtubepremium | monthly   |         129.00 |                 |                 | active  |             129.00
+ Amazon Prime          | yearly    |        1499.00 |                 |                 | active  |             124.92
+ Spotify               | monthly   |         119.00 |                 |                 | active  |             119.00
+ Disney Hotstar        | quarterly |         299.00 |                 |                 | active  |              99.67
+ Cult Fit Gym          | monthly   |        1200.00 |                 |                 | dormant |            1200.00
+(11 rows)
+
+=== Q6  Recursive query: upcoming charges in the next 60 days
+ sub_id |  display_name  |  due_date  |  amount  
+--------+----------------+------------+----------
+      6 | Spotify        | 2026-11-20 |   119.00
+      1 | Airtel Prepaid | 2026-11-29 |   299.00
+      4 | House Rent     | 2026-12-01 | 25000.00
+      5 | Netflix        | 2026-12-05 |   649.00
+      6 | Spotify        | 2026-12-20 |   119.00
+      1 | Airtel Prepaid | 2026-12-29 |   299.00
+      4 | House Rent     | 2027-01-01 | 25000.00
+      5 | Netflix        | 2027-01-05 |   649.00
+(8 rows)
+
+=== Q7  Views: monthly totals, financial deja vu, household duplicates, budgets
+ account_id | active_subscriptions | monthly_total | yearly_total 
+------------+----------------------+---------------+--------------
+          1 |                    5 |      26191.92 |    314303.04
+          2 |                    5 |       2645.67 |     31748.04
+          3 |                    2 |       1950.00 |     23400.00
+          4 |                    4 |       5157.00 |     61884.00
+(4 rows)
+
+  txn_date  |      raw_description       | amount  | prev_date  
+------------+----------------------------+---------+------------
+ 2026-10-26 | AMAZON.IN ORDER #338730753 | 2499.00 | 2026-10-25
+ 2026-10-11 | MAKEMYTRIP INDIA 630151    | 4520.00 | 2026-10-11
+(2 rows)
+
+ display_name | account_id | other_account_id 
+--------------+------------+------------------
+ Spotify      |          1 |                4
+(1 row)
+
+   category    | monthly_limit | spent_this_month | pct_used | state 
+---------------+---------------+------------------+----------+-------
+ Food & Dining |       4000.00 |          2848.00 |     71.2 | ok
+ Entertainment |       1500.00 |           778.00 |     51.9 | ok
+ Transport     |       2000.00 |          5729.00 |    286.5 | over
+ Shopping      |       5000.00 |                0 |      0.0 | ok
+ Groceries     |       6000.00 |          3316.00 |     55.3 | ok
+(5 rows)
+
+=== Q8  Vector similarity search (pgvector, cosine distance, HNSW index)
+    "Which transactions are most like Netflix?" - nearest neighbours of a Netflix row
+     merchant_key      | similarity 
+-----------------------+------------
+ netflix               |      1.000
+ amazon prime          |      0.558
+ amazon order          |      0.404
+ spotify               |      0.385
+ google youtubepremium |      0.380
+ uber                  |      0.367
+ disney hotstar        |      0.347
+ audible               |      0.324
+(8 rows)
+
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Limit
+   InitPlan 1 (returns $0)
+     ->  Limit
+           ->  Index Scan using idx_txn_account_merchant on transactions transactions_1
+                 Index Cond: (merchant_key = 'netflix'::text)
+   ->  Index Scan using idx_txn_embedding_hnsw on transactions
+         Order By: (embedding <=> $0)
+(7 rows)
+
+=== Q9  Full-text search (GIN index)
+  txn_date  |    raw_description    | amount  
+------------+-----------------------+---------
+ 2026-11-02 | NACH GOLDS GYM 085682 | 1500.00
+ 2026-10-02 | NACH GOLDS GYM 851040 | 1500.00
+ 2026-09-02 | NACH GOLDS GYM 569465 | 1500.00
+ 2026-08-02 | NACH GOLDS GYM 938725 | 1500.00
+ 2026-07-02 | NACH GOLDS GYM 073403 | 1500.00
+(5 rows)
+
+=== Q10 Trigger demo: a price change is logged and flagged automatically
+BEGIN
+ sub_id | display_name | current_amount | price_alert 
+--------+--------------+----------------+-------------
+      6 | Spotify      |         119.00 | f
+(1 row)
+
+UPDATE 1
+ display_name | current_amount | price_alert | old_amount | new_amount | pct_change 
+--------------+----------------+-------------+------------+------------+------------
+ Spotify      |         179.00 | t           |     119.00 |     179.00 |      50.42
+(1 row)
+
+ROLLBACK
+=== Q11 Transaction demo: set_split is atomic - a bad split (ERROR below is expected) leaves the old one untouched
+BEGIN
+ sub_id | user_id | share_percent 
+--------+---------+---------------
+      5 |       1 |         50.00
+      5 |       2 |         50.00
+(2 rows)
+
+SAVEPOINT
+ERROR:  Shares must add up to 100 percent (they add up to 110)
+CONTEXT:  PL/pgSQL function set_split(integer,integer[],numeric[]) line 16 at RAISE
+ROLLBACK
+ sub_id | user_id | share_percent 
+--------+---------+---------------
+      5 |       1 |         50.00
+      5 |       2 |         50.00
+(2 rows)
+
+ set_split 
+-----------
+         2
+(1 row)
+
+ sub_id | user_id | share_percent 
+--------+---------+---------------
+      5 |       1 |         70.00
+      5 |       2 |         30.00
+(2 rows)
+
+ROLLBACK
+=== Q12 Constraint demo: the database rejects invalid data (the 3 ERRORs below are expected)
+BEGIN
+SAVEPOINT
+ERROR:  new row for relation "users" violates check constraint "users_password_is_bcrypt"
+DETAIL:  Failing row contains (3, x@y.dev, plaintext, XY, 2026-11-13 05:25:21.000961+00, null).
+ROLLBACK
+SAVEPOINT
+ERROR:  value for domain positive_amount violates check constraint "positive_amount_check"
+ROLLBACK
+SAVEPOINT
+ERROR:  This person already owns the account
+CONTEXT:  PL/pgSQL function trg_member_not_owner() line 4 at RAISE
+ROLLBACK
+ROLLBACK
+=== Q13 DML: INSERT / UPDATE / DELETE on budgets (rolled back)
+BEGIN
+ budget_id | user_id | category_id | monthly_limit 
+-----------+---------+-------------+---------------
+         6 |       1 |           5 |       3000.00
+(1 row)
+
+INSERT 0 1
+ budget_id | monthly_limit 
+-----------+---------------
+         6 |       3500.00
+(1 row)
+
+UPDATE 1
+ budget_id 
+-----------
+         6
+(1 row)
+
+DELETE 1
+ROLLBACK
+=== Q14 DDL: ALTER and DROP (rolled back)
+BEGIN
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+DROP TABLE
+ROLLBACK

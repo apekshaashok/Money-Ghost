@@ -1,0 +1,23 @@
+flowchart LR
+  subgraph Client["Browser"]
+    UI["Next.js pages (React)<br/>dashboard · subscriptions · transactions<br/>search · import · household · budgets"]
+  end
+  subgraph Server["Next.js server (Node.js)"]
+    MW["middleware.js<br/>JWT check"]
+    API["Route handlers /api/*<br/>lib/api.js: session check,<br/>user_access_level()"]
+    IMP["lib/importer.js<br/>parse → profile → normalise"]
+    EMB["MiniLM-L6-v2<br/>local ONNX, 384-d"]
+  end
+  subgraph Data["Databases (Docker)"]
+    PG[("PostgreSQL 16<br/>tables · views · triggers<br/>functions · procedures")]
+    VEC[("pgvector<br/>embeddings + HNSW")]
+    MDB[("MongoDB 7<br/>raw_statements · bank_profiles")]
+  end
+  UI -- "HTTPS + httpOnly cookie" --> MW --> API
+  API --> IMP
+  IMP -- "1. raw file as document" --> MDB
+  IMP -- "2. embed merchant text" --> EMB
+  IMP -- "3. one SQL transaction:<br/>INSERT rows + detect_subscriptions()" --> PG
+  PG --- VEC
+  API -- "SQL (parameterised)" --> PG
+  API -- "aggregation pipeline" --> MDB
