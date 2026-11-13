@@ -1,0 +1,62 @@
+// Bank statement formats understood by the importer. Stored in MongoDB (bank_profiles):
+// each bank names its columns differently, and a new format is just one more document
+// without any change to the SQL schema.
+export const BANK_PROFILES = [
+  {
+    code: 'generic_csv',
+    bank: 'Generic CSV',
+    format: 'csv',
+    match_headers: ['date', 'description', 'amount'],
+    columns: { date: 'date', description: 'description', amount: 'amount' },
+    date_format: 'auto',
+    amount_sign: 'absolute',
+    notes: 'Any CSV with date, description and amount columns. Every row is treated as a debit.',
+  },
+  {
+    code: 'hdfc_savings_csv',
+    bank: 'HDFC Bank (savings)',
+    format: 'csv',
+    match_headers: ['Date', 'Narration', 'Withdrawal Amt.', 'Deposit Amt.'],
+    columns: { date: 'Date', description: 'Narration', debit: 'Withdrawal Amt.', credit: 'Deposit Amt.' },
+    date_format: 'DD/MM/YY',
+    notes: 'Separate withdrawal / deposit columns; deposits are skipped.',
+  },
+  {
+    code: 'icici_card_csv',
+    bank: 'ICICI Bank (credit card)',
+    format: 'csv',
+    match_headers: ['Transaction Date', 'Details', 'Amount (INR)', 'Type'],
+    columns: { date: 'Transaction Date', description: 'Details', amount: 'Amount (INR)', direction: 'Type' },
+    debit_values: ['Dr', 'Debit'],
+    date_format: 'DD-MM-YYYY',
+    notes: 'Single amount column with a Dr/Cr type column.',
+  },
+  {
+    code: 'sbi_savings_csv',
+    bank: 'SBI (savings)',
+    format: 'csv',
+    match_headers: ['Txn Date', 'Description', 'Debit', 'Credit'],
+    columns: { date: 'Txn Date', description: 'Description', debit: 'Debit', credit: 'Credit' },
+    date_format: 'DD MMM YYYY',
+    notes: 'Dates like "03 May 2026".',
+  },
+  {
+    code: 'paytm_wallet_json',
+    bank: 'Paytm Wallet (JSON export)',
+    format: 'json',
+    records_path: 'statement.transactions',
+    columns: { date: 'postedOn', description: 'merchant.name', amount: 'amount.value', direction: 'direction' },
+    debit_values: ['DEBIT'],
+    date_format: 'ISO',
+    notes: 'Nested JSON: statement.transactions[].merchant.name, amount.value.',
+  },
+  {
+    code: 'generic_json',
+    bank: 'Generic JSON array',
+    format: 'json',
+    columns: { date: 'date', description: 'description', amount: 'amount' },
+    date_format: 'auto',
+    amount_sign: 'absolute',
+    notes: 'A JSON array of {date, description, amount} objects.',
+  },
+];
