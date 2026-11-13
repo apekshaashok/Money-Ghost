@@ -1,0 +1,27 @@
+# Local databases for Money Ghosts. Credentials come from .env.local:
+#   docker compose --env-file .env.local up -d     (or: npm run db:up)
+services:
+  postgres:
+    image: pgvector/pgvector:pg16          # PostgreSQL 16 + pgvector extension
+    container_name: moneyghosts-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: moneyghosts
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d moneyghosts"]
+      interval: 3s
+      retries: 20
+  mongo:
+    image: mongo:7
+    container_name: moneyghosts-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    ports: ["27017:27017"]
+    volumes: [mongodata:/data/db]
+volumes:
+  pgdata:
+  mongodata:

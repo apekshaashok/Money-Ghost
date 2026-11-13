@@ -1,0 +1,38 @@
+{
+  "name": "money-ghosts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Subscription leak & financial deja vu detector - PostgreSQL + pgvector + MongoDB + Next.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:up": "docker compose --env-file .env.local up -d --wait",
+    "db:down": "docker compose --env-file .env.local down",
+    "db:setup": "node --env-file=.env.local scripts/setup-db.mjs",
+    "db:seed": "node --env-file=.env.local scripts/seed.mjs",
+    "samples": "node scripts/generate-samples.mjs",
+    "test": "node --env-file=.env.local --test --test-concurrency=1 tests/*.test.mjs",
+    "screenshots": "node --env-file=.env.local scripts/screenshots.mjs",
+    "report": "node scripts/build-report.mjs"
+  },
+  "dependencies": {
+    "@xenova/transformers": "2.17.2",
+    "bcryptjs": "2.4.3",
+    "jose": "5.9.6",
+    "mongodb": "6.10.0",
+    "next": "14.2.35",
+    "papaparse": "5.4.1",
+    "pg": "8.13.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "marked": "14.1.4",
+    "puppeteer-core": "23.11.1"
+  },
+  "allowScripts": {
+    "sharp@0.32.6": true
+  }
+}
